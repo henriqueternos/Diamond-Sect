@@ -67,7 +67,7 @@ function renderUploadPreview(existingUrls = []){
 
 document.getElementById("p_files")?.addEventListener("change", (e) => {
   selectedFiles = Array.from(e.target.files || []);
-  const existing = document.getElementById("p_images").value.split("\n").map(s => s.trim()).filter(Boolean);
+  const existing = document.getElementById("p_images").value.split(String.fromCharCode(10)).map(s => s.trim()).filter(Boolean);
   renderUploadPreview(existing);
 });
 function asMoney(v){ return Number(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"}); }
@@ -238,10 +238,10 @@ async function loadAdmin(){
     document.getElementById("p_badge").value = p.badge || "";
     document.getElementById("p_short").value = p.shortDescription || "";
     document.getElementById("p_description").value = p.description || "";
-    document.getElementById("p_images").value = (p.images || []).join("\n");
+    document.getElementById("p_images").value = (p.images || []).join(String.fromCharCode(10));
     selectedFiles = [];
     renderUploadPreview(p.images || []);
-    document.getElementById("p_specs").value = Object.entries(p.specs || {}).map(([k,v]) => `${k}: ${v}`).join("\n");
+    document.getElementById("p_specs").value = Object.entries(p.specs || {}).map(([k,v]) => `${k}: ${v}`).join(String.fromCharCode(10));
   }));
 
   document.querySelectorAll(".del-product").forEach(btn => btn.addEventListener("click", async () => {
@@ -256,8 +256,7 @@ document.getElementById("productForm")?.addEventListener("submit", async (e) => 
   e.preventDefault();
   const id = document.getElementById("p_id").value.trim();
   if(!id){ formNotice("Informe o ID do produto.", true); return; }
-  const specsRaw = document.getElementById("p_specs").value.split("
-").filter(Boolean);
+  const specsRaw = document.getElementById("p_specs").value.split(String.fromCharCode(10)).filter(Boolean);
   const specs = {};
   specsRaw.forEach(line => {
     const [k,...rest] = line.split(":");
@@ -265,8 +264,7 @@ document.getElementById("productForm")?.addEventListener("submit", async (e) => 
   });
 
   formNotice("Salvando produto...");
-  const existingUrls = document.getElementById("p_images").value.split("
-").map(s => s.trim()).filter(Boolean);
+  const existingUrls = document.getElementById("p_images").value.split(String.fromCharCode(10)).map(s => s.trim()).filter(Boolean);
   let uploadedUrls = [];
   if(selectedFiles.length){
     formNotice(`Enviando ${selectedFiles.length} imagem(ns)...`);
@@ -293,8 +291,7 @@ document.getElementById("productForm")?.addEventListener("submit", async (e) => 
   };
 
   await writePath(`products/products/items/${id}`, payload);
-  document.getElementById("p_images").value = (payload.images || []).join("
-");
+  document.getElementById("p_images").value = (payload.images || []).join(String.fromCharCode(10));
   document.getElementById("p_files").value = "";
   selectedFiles = [];
   renderUploadPreview(payload.images || []);
