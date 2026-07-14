@@ -1,0 +1,80 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Só o e-mail administrador configurado no site tem privilégios de admin
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email == 'rickgoncallvess@gmail.com';
+    }
+
+    // ---------------------------------------------------------------
+    // PRODUTOS — qualquer visitante pode ler (catálogo público),
+    // só o admin pode criar, editar ou remover produtos.
+    // ---------------------------------------------------------------
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ---------------------------------------------------------------
+    // CONTEÚDO DO SITE (heroes das páginas) — leitura pública,
+    // escrita só pelo admin.
+    // ---------------------------------------------------------------
+    match /siteContent/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ---------------------------------------------------------------
+    // PEDIDOS — o checkout é feito sem exigir login (compra como
+    // visitante), então precisamos liberar a CRIAÇÃO para qualquer
+    // pessoa. Só o admin pode listar, editar ou apagar pedidos depois.
+    // Validação básica dos campos pra evitar lixo/abuso.
+    // ---------------------------------------------------------------
+    match /orders/{orderId} {
+      allow create: if isValidOrder(request.resource.data);
+      allow read, update, delete: if isAdmin();
+    }
+
+    function isValidOrder(data) {
+      return data.keys().hasAll(['customerName','customerPhone','items','total','createdAt'])
+        && data.customerName is string && data.customerName.size() > 0
+        && data.customerPhone is string && data.customerPhone.size() > 0
+        && data.items is list && data.items.size() > 0
+        && data.total is number && data.total > 0;
+    }
+
+    // ---------------------------------------------------------------
+    // PAGAMENTOS — mesma lógica dos pedidos: criação pública
+    // (registrado no momento do checkout), leitura só pelo admin.
+    // ---------------------------------------------------------------
+    match /payments/{paymentId} {
+      allow create: if isValidPayment(request.resource.data);
+      allow read, update, delete: if isAdmin();
+    }
+
+    function isValidPayment(data) {
+      return data.keys().hasAll(['customerName','customerPhone','method','total','createdAt'])
+        && data.customerName is string && data.customerName.size() > 0
+        && data.method is string
+        && data.total is number && data.total > 0;
+    }
+
+    // ---------------------------------------------------------------
+    // USUÁRIOS — cada pessoa só pode ler/escrever o próprio
+    // documento (uid == id do documento). O admin pode ler todos
+    // (usado na aba "Clientes" do painel).
+    // ---------------------------------------------------------------
+    match /users/{userId} {
+      allow read: if isAdmin() || (request.auth != null && request.auth.uid == userId);
+      allow write: if isAdmin() || (request.auth != null && request.auth.uid == userId);
+    }
+
+    // Qualquer outro caminho fica bloqueado por padrão.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
